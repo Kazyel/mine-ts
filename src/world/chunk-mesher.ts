@@ -1,13 +1,17 @@
 import { BufferAttribute, BufferGeometry } from "three";
-import { CHUNK_HEIGHT, CHUNK_SIZE } from "@/game/constants";
 
+import type { AssetLoader } from "@/game/asset-loader";
+import { CHUNK_HEIGHT, CHUNK_SIZE } from "@/game/constants";
 import type { Chunk } from "@/world/chunk";
+import { BlockRegistry } from "./blocks/block-registry";
 
 export class ChunkMesher {
 	private chunk: Chunk;
+	private assetLoader: AssetLoader;
 
-	constructor(chunk: Chunk) {
+	constructor(chunk: Chunk, assetLoader: AssetLoader) {
 		this.chunk = chunk;
+		this.assetLoader = assetLoader;
 	}
 
 	public generate(): BufferGeometry {
@@ -17,7 +21,22 @@ export class ChunkMesher {
 		for (let x = 0; x < CHUNK_SIZE; x++) {
 			for (let y = 0; y < CHUNK_HEIGHT; y++) {
 				for (let z = 0; z < CHUNK_SIZE; z++) {
-					if (this.chunk.getBlock(x, y, z) === 0) continue;
+					const currentBlock = this.chunk.getBlock(x, y, z);
+					if (currentBlock === 0) continue;
+					const currentBlockTexture = BlockRegistry[currentBlock];
+
+					const topUV = this.assetLoader.getUVOffset(
+						currentBlockTexture.textures.top.col,
+						currentBlockTexture.textures.top.row,
+					);
+					const sideUV = this.assetLoader.getUVOffset(
+						currentBlockTexture.textures.side.col,
+						currentBlockTexture.textures.side.row,
+					);
+					const bottomUV = this.assetLoader.getUVOffset(
+						currentBlockTexture.textures.bottom.col,
+						currentBlockTexture.textures.bottom.row,
+					);
 
 					// TOP FACE
 					if (this.chunk.getBlock(x, y + 1, z) === 0) {
@@ -28,6 +47,9 @@ export class ChunkMesher {
 							[x + 1, y + 1, z],
 							[x, y + 1, z + 1],
 							[x + 1, y + 1, z + 1],
+							topUV.u,
+							topUV.v,
+							topUV.size,
 						);
 					}
 
@@ -40,6 +62,9 @@ export class ChunkMesher {
 							[x + 1, y, z],
 							[x, y, z + 1],
 							[x + 1, y, z + 1],
+							bottomUV.u,
+							bottomUV.v,
+							bottomUV.size,
 						);
 					}
 
@@ -52,6 +77,9 @@ export class ChunkMesher {
 							[x + 1, y + 1, z],
 							[x + 1, y, z + 1],
 							[x + 1, y + 1, z + 1],
+							sideUV.u,
+							sideUV.v,
+							sideUV.size,
 						);
 					}
 
@@ -64,6 +92,9 @@ export class ChunkMesher {
 							[x, y + 1, z],
 							[x, y, z + 1],
 							[x, y + 1, z + 1],
+							sideUV.u,
+							sideUV.v,
+							sideUV.size,
 						);
 					}
 
@@ -76,6 +107,9 @@ export class ChunkMesher {
 							[x + 1, y, z + 1],
 							[x, y + 1, z + 1],
 							[x + 1, y + 1, z + 1],
+							sideUV.u,
+							sideUV.v,
+							sideUV.size,
 						);
 					}
 
@@ -88,6 +122,9 @@ export class ChunkMesher {
 							[x + 1, y, z],
 							[x, y + 1, z],
 							[x + 1, y + 1, z],
+							sideUV.u,
+							sideUV.v,
+							sideUV.size,
 						);
 					}
 				}
@@ -113,18 +150,21 @@ function addFace(
 	v1: number[],
 	v2: number[],
 	v3: number[],
+	u: number,
+	v: number,
+	size: number,
 ) {
 	positions.push(...v0);
-	uvs.push(0, 1); // top-left
+	uvs.push(u, v + size); // top-left
 	positions.push(...v1);
-	uvs.push(1, 1); // top-right
+	uvs.push(u + size, v + size); // top-right
 	positions.push(...v2);
-	uvs.push(0, 0); // bottom-LEFT
+	uvs.push(u, v); // bottom-LEFT
 
 	positions.push(...v1);
-	uvs.push(1, 1); // top-right
+	uvs.push(u + size, v + size); // top-right
 	positions.push(...v3);
-	uvs.push(1, 0); // bottom-RIGHT
+	uvs.push(u + size, v); // bottom-RIGHT
 	positions.push(...v2);
-	uvs.push(0, 0); // bottom-left
+	uvs.push(u, v); // bottom-left
 }

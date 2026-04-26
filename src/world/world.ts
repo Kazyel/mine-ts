@@ -1,5 +1,6 @@
-import { type Material, Mesh, type Scene } from "three";
+import { type Scene, Mesh } from "three";
 import type { PlayerPosition } from "@/bridge/game-event-emitter";
+import type { AssetLoader } from "@/game/asset-loader";
 import {
 	CHUNK_HEIGHT,
 	CHUNK_SIZE,
@@ -20,12 +21,12 @@ import { ChunkMesher } from "@/world/chunk-mesher";
 export class World {
 	private loadedChunks: Map<string, Chunk> = new Map();
 	private loadedMeshes: Map<string, Mesh> = new Map();
+	private assetLoader: AssetLoader;
 	private scene: Scene;
-	private material: Material;
 
-	constructor(scene: Scene, material: Material) {
+	constructor(scene: Scene, assetLoader: AssetLoader) {
 		this.scene = scene;
-		this.material = material;
+		this.assetLoader = assetLoader;
 	}
 
 	private getChunk(coord: ChunkCoord): Chunk | null {
@@ -60,6 +61,8 @@ export class World {
 	}
 
 	public loadChunk(coord: ChunkCoord): void {
+		if (!this.assetLoader.isTextureLoaded) return;
+
 		const chunk = this.getChunk(coord);
 		if (chunk) return;
 
@@ -79,11 +82,10 @@ export class World {
 			blockCount++;
 		}
 
-		const chunkMesh = new ChunkMesher(newChunk);
+		const chunkMesh = new ChunkMesher(newChunk, this.assetLoader);
 		const meshGeometry = chunkMesh.generate();
-		const objectMesh = new Mesh(meshGeometry, this.material);
+		const objectMesh = new Mesh(meshGeometry, this.assetLoader.getMaterial());
 		objectMesh.position.set(coord.cx * CHUNK_SIZE, 0, coord.cz * CHUNK_SIZE);
-
 		this.scene.add(objectMesh);
 		this.loadedMeshes.set(coordsToChunkKey(coord), objectMesh);
 		this.loadedChunks.set(coordsToChunkKey(coord), newChunk);
@@ -101,6 +103,25 @@ export class World {
 
 		this.loadedMeshes.delete(key);
 		this.loadedChunks.delete(key);
+	}
+
+	public remeshChunk(coord: ChunkCoord): void {
+		const chunkKey = coordsToChunkKey(coord);
+		const existingMesh = this.loadedMeshes.get(chunkKey);
+		const existingChunk = this.loadedChunks.get(chunkKey);
+		if (!existingMesh || !existingChunk) return;
+
+		existingMesh.geometry.dispose();
+		existingMesh.geometry = new ChunkMesher(
+			existingChunk,
+			this.assetLoader,
+		).generate();
+	}
+
+	public destroyBlock(worldX: number, worldY: number, worldZ: number): void {
+		this.setBlock(worldX, worldY, worldZ, 0);
+		const chunkCoord = coordsfromWorldPosition(worldX, worldZ);
+		this.remeshChunk(chunkCoord);
 	}
 
 	public update(playerPosition: PlayerPosition) {

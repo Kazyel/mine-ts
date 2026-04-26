@@ -1,16 +1,16 @@
 import type { BlockId } from "@/world/blocks/block-type";
 
 export type TextureFaces = {
-	top: string;
-	side: string;
-	bottom: string;
+	top: { col: number; row: number };
+	side: { col: number; row: number };
+	bottom: { col: number; row: number };
 };
 
 export type BlockDefinition = {
 	id: BlockId;
 	name: string;
 	hardness: number;
-	texture: string | TextureFaces;
+	textures: TextureFaces;
 	solid: boolean;
 	transparent: boolean;
 };
@@ -20,7 +20,11 @@ export const BlockRegistry: Record<BlockId, BlockDefinition> = {
 		id: 0,
 		name: "Air",
 		hardness: 0,
-		texture: "",
+		textures: {
+			top: { col: 0, row: 0 },
+			side: { col: 0, row: 0 },
+			bottom: { col: 0, row: 0 },
+		},
 		solid: false,
 		transparent: true,
 	},
@@ -28,7 +32,11 @@ export const BlockRegistry: Record<BlockId, BlockDefinition> = {
 		id: 1,
 		name: "Stone",
 		hardness: 1,
-		texture: "stone.png",
+		textures: {
+			top: { col: 1, row: 0 },
+			side: { col: 1, row: 0 },
+			bottom: { col: 1, row: 0 },
+		},
 		solid: true,
 		transparent: false,
 	},
@@ -36,7 +44,11 @@ export const BlockRegistry: Record<BlockId, BlockDefinition> = {
 		id: 2,
 		name: "Dirt",
 		hardness: 0.5,
-		texture: "dirt.png",
+		textures: {
+			top: { col: 1, row: 0 },
+			side: { col: 1, row: 0 },
+			bottom: { col: 1, row: 0 },
+		},
 		solid: true,
 		transparent: false,
 	},
@@ -44,7 +56,11 @@ export const BlockRegistry: Record<BlockId, BlockDefinition> = {
 		id: 3,
 		name: "Grass",
 		hardness: 0.6,
-		texture: "grass.png",
+		textures: {
+			top: { col: 1, row: 0 },
+			side: { col: 1, row: 0 },
+			bottom: { col: 1, row: 0 },
+		},
 		solid: true,
 		transparent: false,
 	},
