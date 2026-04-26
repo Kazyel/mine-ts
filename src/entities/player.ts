@@ -5,9 +5,15 @@ import type { World } from "@/world/world";
 import { moveAndCollide } from "./physics";
 import { raycastDDA } from "@/world/raycast";
 
-const PLAYER_SPEED = 5;
-const PLAYER_HEIGHT = 2;
-const PLAYER_JUMP_FORCE = 8;
+export const PLAYER_SPEED = 5;
+export const PLAYER_HEIGHT = 2;
+export const PLAYER_EYE_HEIGHT = 1.7;
+export const PLAYER_JUMP_FORCE = 8.5;
+export const PLAYER_BOUNDING_BOX = {
+	x: 0.3,
+	y: PLAYER_HEIGHT,
+	z: 0.3,
+};
 
 export class Player {
 	private position: Vector3;
@@ -81,7 +87,6 @@ export class Player {
 		}
 
 		if (movementDirection.length() > 0) movementDirection.normalize();
-
 		this.velocity.x = movementDirection.x * PLAYER_SPEED;
 		this.velocity.z = movementDirection.z * PLAYER_SPEED;
 
@@ -90,8 +95,8 @@ export class Player {
 		this.velocity = result.velocity;
 		this.onGround = result.onGround;
 
-		this.camera.position
-			.copy(this.position)
-			.add(new Vector3(0, PLAYER_HEIGHT, 0));
+		this.camera.position.copy(
+			this.position.clone().add(new Vector3(0, PLAYER_EYE_HEIGHT, 0)),
+		);
 	}
 }

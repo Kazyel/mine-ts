@@ -33,9 +33,9 @@ export const BlockRegistry: Record<BlockId, BlockDefinition> = {
 		name: "Stone",
 		hardness: 1,
 		textures: {
-			top: { col: 1, row: 0 },
-			side: { col: 1, row: 0 },
-			bottom: { col: 1, row: 0 },
+			top: { col: 0, row: 1 },
+			side: { col: 0, row: 1 },
+			bottom: { col: 0, row: 1 },
 		},
 		solid: true,
 		transparent: false,

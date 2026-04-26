@@ -23,6 +23,7 @@ export class AssetLoader {
 			this.textureMaterial = new MeshLambertMaterial({
 				map: this.texture,
 				side: DoubleSide,
+				vertexColors: true,
 			});
 			this.totalCols = texture.image.width / 16;
 			this.totalRows = texture.image.height / 16;
