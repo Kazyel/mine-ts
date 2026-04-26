@@ -1,19 +1,8 @@
-import {
-	AmbientLight,
-	Color,
-	DirectionalLight,
-	DoubleSide,
-	Fog,
-	MeshLambertMaterial,
-	NearestFilter,
-	PerspectiveCamera,
-	Scene,
-	TextureLoader,
-	WebGLRenderer,
-} from "three";
+import { Color, Fog, PerspectiveCamera, Scene, WebGLRenderer } from "three";
 
 import type { GameEventEmitter } from "@/bridge/game-event-emitter";
 import { Player } from "@/entities/player";
+import { AssetLoader } from "@/game/asset-loader";
 import { GameLoop } from "@/game/game-loop";
 import { InputManager } from "@/game/input-manager";
 import { World } from "@/world/world";
@@ -22,6 +11,7 @@ export class Game {
 	private renderer: WebGLRenderer;
 	private scene: Scene;
 	private camera: PerspectiveCamera;
+	private assetLoader: AssetLoader;
 
 	private world: World;
 	private player: Player;
@@ -31,19 +21,9 @@ export class Game {
 	private events: GameEventEmitter;
 
 	constructor(canvas: HTMLCanvasElement, events: GameEventEmitter) {
-		const ambient = new AmbientLight(0xffffff, 0.5);
-		const sun = new DirectionalLight(0xffffff, 0.75);
-		sun.position.set(10, 20, 10);
-
-		const loader = new TextureLoader();
-		const texture = loader.load("/textures/grass.png");
-		texture.magFilter = NearestFilter;
-		texture.minFilter = NearestFilter;
-
 		this.scene = new Scene();
 		this.scene.background = new Color(0x87ceeb);
-		this.scene.add(ambient, sun);
-		this.scene.fog = new Fog(0x87ceeb, 0, 50);
+		this.scene.fog = new Fog(0x87ceeb, 0, 80);
 
 		this.renderer = new WebGLRenderer({ canvas });
 		this.renderer.setSize(canvas.clientWidth, canvas.clientHeight);
@@ -55,32 +35,29 @@ export class Game {
 			1000,
 		);
 
+		// Game Managers
 		this.loop = new GameLoop();
 		this.inputManager = new InputManager();
+		this.assetLoader = new AssetLoader();
 		this.events = events;
 
-		this.world = new World(
-			this.scene,
-			new MeshLambertMaterial({
-				map: texture,
-				side: DoubleSide,
-			}),
-		);
+		// World Entities
+		this.world = new World(this.scene, this.assetLoader);
 		this.player = new Player(this.camera);
 	}
 
 	private tick = (delta: number): void => {
-		this.world.update(this.player.getPosition());
+		this.world.renderDistance(this.player.getPosition());
 		this.player.update(delta, this.inputManager.getState(), this.world);
 		this.renderer.render(this.scene, this.camera);
 	};
 
 	public start(): void {
+		this.loop.start(this.tick);
 		this.inputManager.start(
 			this.renderer.domElement,
 			this.renderer.domElement.ownerDocument,
 		);
-		this.loop.start(this.tick);
 	}
 
 	public destroy(): void {

@@ -4,6 +4,7 @@ export type InputState = {
 	left: boolean;
 	right: boolean;
 	jump: boolean;
+	attack: boolean;
 	mouseData: { x: number; y: number };
 	isPointerLocked: boolean;
 };
@@ -28,6 +29,10 @@ export class InputManager {
 		this.state.mouseData.x = e.movementX;
 		this.state.mouseData.y = e.movementY;
 	};
+	private onAttack = () => {
+		if (!this.state.isPointerLocked) return;
+		this.state.attack = true;
+	};
 
 	constructor() {
 		this.state = {
@@ -36,6 +41,7 @@ export class InputManager {
 			left: false,
 			right: false,
 			jump: false,
+			attack: false,
 			mouseData: { x: 0, y: 0 },
 			isPointerLocked: false,
 		};
@@ -74,6 +80,7 @@ export class InputManager {
 
 		const snapshot = { ...this.state };
 		this.state.mouseData = { x: 0, y: 0 };
+		this.state.attack = false;
 
 		return snapshot;
 	}
@@ -100,6 +107,7 @@ export class InputManager {
 			this.onPointerLockChange,
 		);
 		this.document.addEventListener("mousemove", this.onMouseMove);
+		this.canvas.addEventListener("click", this.onAttack);
 	}
 
 	public destroy() {
@@ -119,5 +127,6 @@ export class InputManager {
 		this.document.removeEventListener("keydown", this.onKeyDown);
 		this.document.removeEventListener("keyup", this.onKeyUp);
 		this.document.removeEventListener("mousemove", this.onMouseMove);
+		this.canvas.removeEventListener("click", this.onAttack);
 	}
 }
