@@ -5,11 +5,11 @@ export type ChunkCoord = {
 	cz: number;
 };
 
-export function toKey(coord: ChunkCoord): string {
+export function coordsToChunkKey(coord: ChunkCoord): string {
 	return `${coord.cx},${coord.cz}`;
 }
 
-export function fromKey(key: string): ChunkCoord {
+export function coordsFromChunkKey(key: string): ChunkCoord {
 	const [cx, cz] = key.split(",").map(Number);
 	return { cx, cz };
 }
@@ -34,6 +34,6 @@ export function neighbours(coord: ChunkCoord): ChunkCoord[] {
 	];
 }
 
-export function fromWorldPosition(x: number, z: number): ChunkCoord {
+export function coordsfromWorldPosition(x: number, z: number): ChunkCoord {
 	return { cx: Math.floor(x / CHUNK_SIZE), cz: Math.floor(z / CHUNK_SIZE) };
 }

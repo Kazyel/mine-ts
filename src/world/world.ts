@@ -11,9 +11,9 @@ import { Chunk } from "@/world/chunk";
 import {
 	type ChunkCoord,
 	distanceTo,
-	fromKey,
-	fromWorldPosition,
-	toKey,
+	coordsFromChunkKey,
+	coordsfromWorldPosition,
+	coordsToChunkKey,
 } from "@/world/chunk-coord";
 import { ChunkMesher } from "@/world/chunk-mesher";
 
@@ -29,15 +29,15 @@ export class World {
 	}
 
 	private getChunk(coord: ChunkCoord): Chunk | null {
-		const chunk = this.loadedChunks.get(toKey(coord));
+		const chunk = this.loadedChunks.get(coordsToChunkKey(coord));
 		return chunk ?? null;
 	}
 
 	public getBlock(worldX: number, worldY: number, worldZ: number): BlockId {
-		const chunk = this.getChunk(fromWorldPosition(worldX, worldZ));
+		const chunk = this.getChunk(coordsfromWorldPosition(worldX, worldZ));
 		if (!chunk) return 0;
 
-		const chunkCoords = fromWorldPosition(worldX, worldZ);
+		const chunkCoords = coordsfromWorldPosition(worldX, worldZ);
 		const localX = worldX - chunkCoords.cx * CHUNK_SIZE;
 		const localZ = worldZ - chunkCoords.cz * CHUNK_SIZE;
 
@@ -50,13 +50,12 @@ export class World {
 		worldZ: number,
 		blockId: BlockId,
 	): void {
-		const chunk = this.getChunk(fromWorldPosition(worldX, worldZ));
+		const chunk = this.getChunk(coordsfromWorldPosition(worldX, worldZ));
 		if (!chunk) return;
 
-		const chunkCoords = fromWorldPosition(worldX, worldZ);
+		const chunkCoords = coordsfromWorldPosition(worldX, worldZ);
 		const localX = worldX - chunkCoords.cx * CHUNK_SIZE;
 		const localZ = worldZ - chunkCoords.cz * CHUNK_SIZE;
-
 		chunk.setBlock(localX, worldY, localZ, blockId);
 	}
 
@@ -69,7 +68,6 @@ export class World {
 
 		while (blockCount < CHUNK_SIZE * CHUNK_SIZE * CHUNK_HEIGHT) {
 			const blockY = Math.floor(blockCount / (CHUNK_SIZE * CHUNK_SIZE));
-
 			if (blockY <= SEA_LEVEL) {
 				newChunk.setBlock(
 					blockCount % CHUNK_SIZE,
@@ -78,22 +76,21 @@ export class World {
 					1,
 				);
 			}
-
 			blockCount++;
 		}
 
 		const chunkMesh = new ChunkMesher(newChunk);
-		const geometry = chunkMesh.generate();
-		const object3d = new Mesh(geometry, this.material);
-		object3d.position.set(coord.cx * CHUNK_SIZE, 0, coord.cz * CHUNK_SIZE);
+		const meshGeometry = chunkMesh.generate();
+		const objectMesh = new Mesh(meshGeometry, this.material);
+		objectMesh.position.set(coord.cx * CHUNK_SIZE, 0, coord.cz * CHUNK_SIZE);
 
-		this.scene.add(object3d);
-		this.loadedMeshes.set(toKey(coord), object3d);
-		this.loadedChunks.set(toKey(coord), newChunk);
+		this.scene.add(objectMesh);
+		this.loadedMeshes.set(coordsToChunkKey(coord), objectMesh);
+		this.loadedChunks.set(coordsToChunkKey(coord), newChunk);
 	}
 
 	public unloadChunk(coord: ChunkCoord): void {
-		const key = toKey(coord);
+		const key = coordsToChunkKey(coord);
 		if (!this.loadedChunks.has(key)) return;
 
 		const chunk = this.loadedChunks.get(key);
@@ -107,7 +104,7 @@ export class World {
 	}
 
 	public update(playerPosition: PlayerPosition) {
-		const playerChunkCoords = fromWorldPosition(
+		const playerChunkCoords = coordsfromWorldPosition(
 			playerPosition.x,
 			playerPosition.z,
 		);
@@ -133,14 +130,14 @@ export class World {
 			}
 		}
 
-		const toUnload: ChunkCoord[] = [];
+		const chunksToUnload: ChunkCoord[] = [];
 
 		for (const key of this.loadedChunks.keys()) {
-			const coord = fromKey(key);
+			const coord = coordsFromChunkKey(key);
 			if (distanceTo(coord, playerChunkCoords) > RENDER_DISTANCE + 2)
-				toUnload.push(coord);
+				chunksToUnload.push(coord);
 		}
-		for (const coord of toUnload) {
+		for (const coord of chunksToUnload) {
 			this.unloadChunk(coord);
 		}
 	}

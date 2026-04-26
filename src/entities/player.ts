@@ -1,23 +1,31 @@
 import { type Camera, Vector3 } from "three";
-import { JUMP_FORCE, SEA_LEVEL } from "@/game/constants";
+import { SEA_LEVEL } from "@/game/constants";
 import type { InputState } from "@/game/input-manager";
 import type { World } from "@/world/world";
 import { moveAndCollide } from "./physics";
 
 const PLAYER_SPEED = 5;
 const PLAYER_HEIGHT = 2;
+const PLAYER_JUMP_FORCE = 8;
 
 export class Player {
 	private position: Vector3;
 	private velocity: Vector3;
 	private onGround: boolean;
+
 	private camera: Camera;
+	private yaw: number;
+	private pitch: number;
 
 	constructor(camera: Camera) {
-		this.position = new Vector3(0, SEA_LEVEL + 1, 0);
+		this.position = new Vector3(0, SEA_LEVEL + 10, 0);
 		this.velocity = new Vector3(0, 0, 0);
 		this.onGround = false;
+
 		this.camera = camera;
+		this.camera.rotation.order = "YXZ";
+		this.yaw = 0;
+		this.pitch = 0;
 	}
 
 	public getPosition(): Vector3 {
@@ -25,6 +33,17 @@ export class Player {
 	}
 
 	public update(delta: number, input: InputState, world: World): void {
+		const sensitivity = 0.002;
+		this.yaw -= input.mouseData.x * sensitivity;
+		this.pitch -= input.mouseData.y * sensitivity;
+
+		this.pitch = Math.max(
+			-Math.PI / 2 + 0.01,
+			Math.min(Math.PI / 2 - 0.01, this.pitch),
+		);
+		this.camera.rotation.y = this.yaw;
+		this.camera.rotation.x = this.pitch;
+
 		const lookDirection = this.camera.getWorldDirection(new Vector3());
 		lookDirection.y = 0;
 		lookDirection.normalize();
@@ -39,9 +58,8 @@ export class Player {
 		if (input.backward) movementDirection.sub(lookDirection);
 		if (input.left) movementDirection.sub(rightDirection);
 		if (input.right) movementDirection.add(rightDirection);
-
 		if (input.jump && this.onGround) {
-			this.velocity.y = JUMP_FORCE;
+			this.velocity.y = PLAYER_JUMP_FORCE;
 			this.onGround = false;
 		}
 

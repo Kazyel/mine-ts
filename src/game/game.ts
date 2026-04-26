@@ -2,9 +2,13 @@ import {
 	AmbientLight,
 	Color,
 	DirectionalLight,
+	DoubleSide,
+	Fog,
 	MeshLambertMaterial,
+	NearestFilter,
 	PerspectiveCamera,
 	Scene,
+	TextureLoader,
 	WebGLRenderer,
 } from "three";
 
@@ -28,14 +32,22 @@ export class Game {
 
 	constructor(canvas: HTMLCanvasElement, events: GameEventEmitter) {
 		const ambient = new AmbientLight(0xffffff, 0.5);
-		const sun = new DirectionalLight(0xffffff, 1);
+		const sun = new DirectionalLight(0xffffff, 0.75);
 		sun.position.set(10, 20, 10);
+
+		const loader = new TextureLoader();
+		const texture = loader.load("/textures/grass.png");
+		texture.magFilter = NearestFilter;
+		texture.minFilter = NearestFilter;
+
 		this.scene = new Scene();
 		this.scene.background = new Color(0x87ceeb);
 		this.scene.add(ambient, sun);
+		this.scene.fog = new Fog(0x87ceeb, 0, 50);
 
 		this.renderer = new WebGLRenderer({ canvas });
 		this.renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+
 		this.camera = new PerspectiveCamera(
 			75,
 			canvas.width / canvas.height,
@@ -43,15 +55,18 @@ export class Game {
 			1000,
 		);
 
+		this.loop = new GameLoop();
+		this.inputManager = new InputManager();
+		this.events = events;
+
 		this.world = new World(
 			this.scene,
-			new MeshLambertMaterial({ color: 0x88bb88 }),
+			new MeshLambertMaterial({
+				map: texture,
+				side: DoubleSide,
+			}),
 		);
 		this.player = new Player(this.camera);
-
-		this.inputManager = new InputManager();
-		this.loop = new GameLoop();
-		this.events = events;
 	}
 
 	private tick = (delta: number): void => {
@@ -65,7 +80,6 @@ export class Game {
 			this.renderer.domElement,
 			this.renderer.domElement.ownerDocument,
 		);
-
 		this.loop.start(this.tick);
 	}
 

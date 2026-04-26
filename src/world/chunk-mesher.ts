@@ -100,6 +100,7 @@ export class ChunkMesher {
 		const geometry = new BufferGeometry();
 		geometry.setAttribute("position", new BufferAttribute(positions, 3));
 		geometry.setAttribute("uv", new BufferAttribute(uvs, 2));
+		geometry.computeVertexNormals();
 
 		return geometry;
 	}
@@ -114,16 +115,16 @@ function addFace(
 	v3: number[],
 ) {
 	positions.push(...v0);
-	uvs.push(0, 1);
+	uvs.push(0, 1); // top-left
 	positions.push(...v1);
-	uvs.push(1, 1);
+	uvs.push(1, 1); // top-right
 	positions.push(...v2);
-	uvs.push(1, 0);
+	uvs.push(0, 0); // bottom-LEFT
 
 	positions.push(...v1);
-	uvs.push(1, 1);
+	uvs.push(1, 1); // top-right
 	positions.push(...v3);
-	uvs.push(0, 0);
+	uvs.push(1, 0); // bottom-RIGHT
 	positions.push(...v2);
-	uvs.push(1, 0);
+	uvs.push(0, 0); // bottom-left
 }
