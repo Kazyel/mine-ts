@@ -43,7 +43,7 @@ export class InputManager {
 		this.heldKeys = new Set();
 	}
 
-	getState(): InputState {
+	public getState(): InputState {
 		this.state.forward = false;
 		this.state.backward = false;
 		this.state.left = false;
@@ -78,7 +78,7 @@ export class InputManager {
 		return snapshot;
 	}
 
-	start(canvas: HTMLCanvasElement, document: Document) {
+	public start(canvas: HTMLCanvasElement, document: Document) {
 		this.document = document;
 		this.canvas = canvas;
 
@@ -102,7 +102,7 @@ export class InputManager {
 		this.document.addEventListener("mousemove", this.onMouseMove);
 	}
 
-	destroy() {
+	public destroy() {
 		if (!this.document || !this.canvas) return;
 
 		if (this.onPointerLockChange) {

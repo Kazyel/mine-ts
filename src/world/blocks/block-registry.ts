@@ -1,4 +1,4 @@
-import type { BlockId } from "./block-type";
+import type { BlockId } from "@/world/blocks/block-type";
 
 export type TextureFaces = {
 	top: string;
