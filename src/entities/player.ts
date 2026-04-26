@@ -3,6 +3,7 @@ import { SEA_LEVEL } from "@/game/constants";
 import type { InputState } from "@/game/input-manager";
 import type { World } from "@/world/world";
 import { moveAndCollide } from "./physics";
+import { raycastDDA } from "@/world/raycast";
 
 const PLAYER_SPEED = 5;
 const PLAYER_HEIGHT = 2;
@@ -61,6 +62,22 @@ export class Player {
 		if (input.jump && this.onGround) {
 			this.velocity.y = PLAYER_JUMP_FORCE;
 			this.onGround = false;
+		}
+		if (input.attack) {
+			const cameraDirection = this.camera.getWorldDirection(new Vector3());
+			const result = raycastDDA(
+				this.camera.position,
+				cameraDirection,
+				5,
+				world,
+			);
+			if (result) {
+				world.destroyBlock(
+					result.blockPosition.x,
+					result.blockPosition.y,
+					result.blockPosition.z,
+				);
+			}
 		}
 
 		if (movementDirection.length() > 0) movementDirection.normalize();

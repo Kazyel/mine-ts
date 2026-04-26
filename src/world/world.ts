@@ -124,7 +124,7 @@ export class World {
 		this.remeshChunk(chunkCoord);
 	}
 
-	public update(playerPosition: PlayerPosition) {
+	public renderDistance(playerPosition: PlayerPosition) {
 		const playerChunkCoords = coordsfromWorldPosition(
 			playerPosition.x,
 			playerPosition.z,
