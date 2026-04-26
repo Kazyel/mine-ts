@@ -11,3 +11,4 @@ export const BLOCK_SIZE = 1;
 // Game
 export const TICK_RATE = 20;
 export const GRAVITY = 20;
+export const JUMP_FORCE = 5;

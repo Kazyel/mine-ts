@@ -1,4 +1,4 @@
-type InputState = {
+export type InputState = {
 	forward: boolean;
 	backward: boolean;
 	left: boolean;
