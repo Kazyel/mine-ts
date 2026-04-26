@@ -12,6 +12,7 @@ export type BlockDefinition = {
 	hardness: number;
 	textures: TextureFaces;
 	solid: boolean;
+	light: number;
 	transparent: boolean;
 };
 
@@ -26,6 +27,7 @@ export const BlockRegistry: Record<BlockId, BlockDefinition> = {
 			bottom: { col: 0, row: 0 },
 		},
 		solid: false,
+		light: 0,
 		transparent: true,
 	},
 	1: {
@@ -38,6 +40,7 @@ export const BlockRegistry: Record<BlockId, BlockDefinition> = {
 			bottom: { col: 0, row: 1 },
 		},
 		solid: true,
+		light: 0,
 		transparent: false,
 	},
 	2: {
@@ -50,6 +53,7 @@ export const BlockRegistry: Record<BlockId, BlockDefinition> = {
 			bottom: { col: 1, row: 0 },
 		},
 		solid: true,
+		light: 0,
 		transparent: false,
 	},
 	3: {
@@ -62,6 +66,7 @@ export const BlockRegistry: Record<BlockId, BlockDefinition> = {
 			bottom: { col: 1, row: 0 },
 		},
 		solid: true,
+		light: 0,
 		transparent: false,
 	},
 };

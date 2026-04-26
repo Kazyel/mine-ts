@@ -4,153 +4,147 @@ import { GRAVITY } from "@/game/constants";
 import { BlockRegistry } from "@/world/blocks/block-registry";
 import type { World } from "@/world/world";
 
+const EPS = 0.001;
+const MAX_STEP = 0.5;
+
 export function moveAndCollide(
 	position: Vector3,
 	velocity: Vector3,
 	world: World,
 	delta: number,
 ): { position: Vector3; velocity: Vector3; onGround: boolean } {
-	let isPlayerOnGround = false;
-	const newPosition = position.clone();
-	const newVelocity = velocity.clone();
+	const pos = position.clone();
+	const vel = velocity.clone();
 
-	newVelocity.y -= GRAVITY * delta;
+	let onGround = false;
 
-	newPosition.x += newVelocity.x * delta;
-	const pushX = computeHorizontalPush(newPosition, world, "x");
-	if (pushX !== 0) {
-		newPosition.x += pushX;
-		newVelocity.x = 0;
+	vel.y -= GRAVITY * delta;
+
+	const maxMove = Math.max(
+		Math.abs(vel.x * delta),
+		Math.abs(vel.y * delta),
+		Math.abs(vel.z * delta),
+	);
+
+	const steps = Math.max(1, Math.ceil(maxMove / MAX_STEP));
+	const stepDelta = delta / steps;
+
+	for (let i = 0; i < steps; i++) {
+		if (vel.x !== 0) {
+			const nextX = pos.x + vel.x * stepDelta;
+			const safeX = sweepAxis(pos, world, nextX, "x");
+
+			if (safeX !== nextX) vel.x = 0;
+			pos.x = safeX;
+		}
+
+		if (vel.y !== 0) {
+			const nextY = pos.y + vel.y * stepDelta;
+			const result = sweepY(pos, world, nextY, vel.y);
+
+			if (result.collided) {
+				if (vel.y < 0) onGround = true;
+				vel.y = 0;
+			}
+
+			pos.y = result.y;
+		}
+
+		if (vel.z !== 0) {
+			const nextZ = pos.z + vel.z * stepDelta;
+			const safeZ = sweepAxis(pos, world, nextZ, "z");
+
+			if (safeZ !== nextZ) vel.z = 0;
+			pos.z = safeZ;
+		}
 	}
 
-	newPosition.y += newVelocity.y * delta;
-	const { floorPush, ceilingPush } = computeVerticalPush(newPosition, world);
-	if (floorPush > 0 && newVelocity.y <= 0) {
-		newPosition.y += floorPush;
-		isPlayerOnGround = true;
-		newVelocity.y = 0;
-	}
-	if (ceilingPush > 0) {
-		newPosition.y -= ceilingPush;
-		newVelocity.y = 0;
-	}
-
-	newPosition.z += newVelocity.z * delta;
-	const pushZ = computeHorizontalPush(newPosition, world, "z");
-	if (pushZ !== 0) {
-		newPosition.z += pushZ;
-		newVelocity.z = 0;
-	}
-
-	return {
-		position: newPosition,
-		velocity: newVelocity,
-		onGround: isPlayerOnGround,
-	};
+	return { position: pos, velocity: vel, onGround };
 }
 
-function computeHorizontalPush(
+function sweepAxis(
 	position: Vector3,
 	world: World,
+	target: number,
 	axis: "x" | "z",
 ): number {
-	const bounds = playerAABB(position);
-	let maxNegativePush = 0;
-	let maxPositivePush = 0;
+	const dir = Math.sign(target - position[axis]);
+	if (dir === 0) return position[axis];
 
-	const isXAxis = axis === "x";
-	const playerAxisPos = isXAxis ? position.x : position.z;
-	const playerCrossPos = isXAxis ? position.z : position.x;
-	const playerHalfWidth = PLAYER_BOUNDING_BOX[axis];
-	const playerCrossHalfWidth = isXAxis
-		? PLAYER_BOUNDING_BOX.z
-		: PLAYER_BOUNDING_BOX.x;
+	const half = PLAYER_BOUNDING_BOX[axis];
+	const minY = Math.floor(position.y);
+	const maxY = Math.floor(position.y + PLAYER_BOUNDING_BOX.y);
 
-	for (let blockX = bounds.minX; blockX <= bounds.maxX; blockX++) {
-		for (let blockY = bounds.minY; blockY <= bounds.maxY; blockY++) {
-			for (let blockZ = bounds.minZ; blockZ <= bounds.maxZ; blockZ++) {
-				const block = world.getBlock(blockX, blockY, blockZ);
-				if (!BlockRegistry[block].solid) continue;
+	const crossMin = Math.floor(
+		position[axis === "x" ? "z" : "x"] -
+			PLAYER_BOUNDING_BOX[axis === "x" ? "z" : "x"],
+	);
+	const crossMax = Math.floor(
+		position[axis === "x" ? "z" : "x"] +
+			PLAYER_BOUNDING_BOX[axis === "x" ? "z" : "x"],
+	);
 
-				const overlapY =
-					Math.min(position.y + PLAYER_BOUNDING_BOX.y, blockY + 1) -
-					Math.max(position.y, blockY);
-				if (overlapY <= 0) continue;
+	const edge = target + dir * half;
 
-				const blockAxisCoord = isXAxis ? blockX : blockZ;
-				const blockCrossCoord = isXAxis ? blockZ : blockX;
+	const blockCoord = dir > 0 ? Math.floor(edge) : Math.floor(edge);
 
-				const overlapCross =
-					Math.min(playerCrossPos + playerCrossHalfWidth, blockCrossCoord + 1) -
-					Math.max(playerCrossPos - playerCrossHalfWidth, blockCrossCoord);
-				if (overlapCross <= 0) continue;
+	for (let y = minY; y <= maxY; y++) {
+		for (let c = crossMin; c <= crossMax; c++) {
+			const x = axis === "x" ? blockCoord : c;
+			const z = axis === "z" ? blockCoord : c;
 
-				const penetration =
-					Math.min(playerAxisPos + playerHalfWidth, blockAxisCoord + 1) -
-					Math.max(playerAxisPos - playerHalfWidth, blockAxisCoord);
-				if (penetration <= 0) continue;
+			const block = world.getBlock(x, y, z);
+			if (!BlockRegistry[block].solid) continue;
 
-				const playerIsLeftOfBlock = playerAxisPos < blockAxisCoord + 0.5;
-				if (playerIsLeftOfBlock) {
-					maxNegativePush = Math.max(maxNegativePush, penetration);
-				} else {
-					maxPositivePush = Math.max(maxPositivePush, penetration);
-				}
+			if (dir > 0) {
+				return blockCoord - half - EPS;
+			} else {
+				return blockCoord + 1 + half + EPS;
 			}
 		}
 	}
 
-	if (maxNegativePush === 0 && maxPositivePush === 0) return 0;
-	if (maxNegativePush >= maxPositivePush) return -maxNegativePush;
-	return maxPositivePush;
+	return target;
 }
 
-function computeVerticalPush(
+function sweepY(
 	position: Vector3,
 	world: World,
-): { floorPush: number; ceilingPush: number } {
-	const bounds = playerAABB(position);
-	let maxFloorPush = 0;
-	let maxCeilingPush = 0;
+	targetY: number,
+	velocityY: number,
+): { y: number; collided: boolean } {
+	const dir = Math.sign(velocityY);
+	if (dir === 0) return { y: targetY, collided: false };
 
-	for (let blockX = bounds.minX; blockX <= bounds.maxX; blockX++) {
-		for (let blockY = bounds.minY; blockY <= bounds.maxY; blockY++) {
-			for (let blockZ = bounds.minZ; blockZ <= bounds.maxZ; blockZ++) {
-				const block = world.getBlock(blockX, blockY, blockZ);
-				if (!BlockRegistry[block].solid) continue;
+	const minX = Math.floor(position.x - PLAYER_BOUNDING_BOX.x);
+	const maxX = Math.floor(position.x + PLAYER_BOUNDING_BOX.x);
+	const minZ = Math.floor(position.z - PLAYER_BOUNDING_BOX.z);
+	const maxZ = Math.floor(position.z + PLAYER_BOUNDING_BOX.z);
 
-				const overlapX =
-					Math.min(position.x + PLAYER_BOUNDING_BOX.x, blockX + 1) -
-					Math.max(position.x - PLAYER_BOUNDING_BOX.x, blockX);
-				const overlapZ =
-					Math.min(position.z + PLAYER_BOUNDING_BOX.z, blockZ + 1) -
-					Math.max(position.z - PLAYER_BOUNDING_BOX.z, blockZ);
-				if (overlapX <= 0 || overlapZ <= 0) continue;
+	const halfY = PLAYER_BOUNDING_BOX.y;
 
-				const playerCenterY = position.y + PLAYER_BOUNDING_BOX.y / 2;
-				const blockCenterY = blockY + 0.5;
+	const edge = dir > 0 ? targetY + halfY : targetY;
 
-				if (playerCenterY >= blockCenterY) {
-					const push = blockY + 1 - position.y;
-					if (push > 0) maxFloorPush = Math.max(maxFloorPush, push);
-				} else {
-					const push = position.y + PLAYER_BOUNDING_BOX.y - blockY;
-					if (push > 0) maxCeilingPush = Math.max(maxCeilingPush, push);
-				}
+	const blockY = Math.floor(edge);
+
+	for (let x = minX; x <= maxX; x++) {
+		for (let z = minZ; z <= maxZ; z++) {
+			const block = world.getBlock(x, blockY, z);
+			if (!BlockRegistry[block].solid) continue;
+
+			if (dir > 0) {
+				return {
+					y: blockY - halfY - EPS,
+					collided: true,
+				};
+			} else {
+				return {
+					y: blockY + 1 + EPS,
+					collided: true,
+				};
 			}
 		}
 	}
 
-	return { floorPush: maxFloorPush, ceilingPush: maxCeilingPush };
-}
-
-function playerAABB(position: Vector3) {
-	return {
-		minX: Math.floor(position.x - PLAYER_BOUNDING_BOX.x),
-		maxX: Math.floor(position.x + PLAYER_BOUNDING_BOX.x),
-		minY: Math.floor(position.y),
-		maxY: Math.floor(position.y + PLAYER_BOUNDING_BOX.y),
-		minZ: Math.floor(position.z - PLAYER_BOUNDING_BOX.z),
-		maxZ: Math.floor(position.z + PLAYER_BOUNDING_BOX.z),
-	};
+	return { y: targetY, collided: false };
 }

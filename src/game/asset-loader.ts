@@ -1,6 +1,6 @@
 import {
 	DoubleSide,
-	MeshLambertMaterial,
+	MeshBasicMaterial,
 	NearestFilter,
 	type Texture,
 	TextureLoader,
@@ -9,7 +9,7 @@ import {
 export class AssetLoader {
 	private textureLoader: TextureLoader;
 	private texture: Texture;
-	private textureMaterial: MeshLambertMaterial = new MeshLambertMaterial();
+	private textureMaterial: MeshBasicMaterial = new MeshBasicMaterial();
 	private totalCols: number = 0;
 	private totalRows: number = 0;
 	public isTextureLoaded: boolean = false;
@@ -20,7 +20,7 @@ export class AssetLoader {
 			this.texture = texture;
 			this.texture.magFilter = NearestFilter;
 			this.texture.minFilter = NearestFilter;
-			this.textureMaterial = new MeshLambertMaterial({
+			this.textureMaterial = new MeshBasicMaterial({
 				map: this.texture,
 				side: DoubleSide,
 				vertexColors: true,
@@ -31,7 +31,7 @@ export class AssetLoader {
 		});
 	}
 
-	public getMaterial(): MeshLambertMaterial {
+	public getMaterial(): MeshBasicMaterial {
 		return this.textureMaterial;
 	}
 

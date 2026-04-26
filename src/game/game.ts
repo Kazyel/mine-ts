@@ -1,12 +1,4 @@
-import {
-	AmbientLight,
-	Color,
-	DirectionalLight,
-	Fog,
-	PerspectiveCamera,
-	Scene,
-	WebGLRenderer,
-} from "three";
+import { Color, Fog, PerspectiveCamera, Scene, WebGLRenderer } from "three";
 
 import type { GameEventEmitter } from "@/bridge/game-event-emitter";
 import { Player } from "@/entities/player";
@@ -29,15 +21,9 @@ export class Game {
 	private events: GameEventEmitter;
 
 	constructor(canvas: HTMLCanvasElement, events: GameEventEmitter) {
-		// Rendering
-		const ambient = new AmbientLight(0xffffff, 0.5);
-		const sun = new DirectionalLight(0xffffff, 1);
-		sun.position.set(10, 20, 10);
-
 		this.scene = new Scene();
 		this.scene.background = new Color(0x87ceeb);
 		this.scene.fog = new Fog(0x87ceeb, 0, 80);
-		this.scene.add(ambient, sun);
 
 		this.renderer = new WebGLRenderer({ canvas });
 		this.renderer.setSize(canvas.clientWidth, canvas.clientHeight);
@@ -67,11 +53,11 @@ export class Game {
 	};
 
 	public start(): void {
+		this.loop.start(this.tick);
 		this.inputManager.start(
 			this.renderer.domElement,
 			this.renderer.domElement.ownerDocument,
 		);
-		this.loop.start(this.tick);
 	}
 
 	public destroy(): void {

@@ -5,7 +5,7 @@ import { CHUNK_HEIGHT, CHUNK_SIZE } from "@/game/constants";
 import { BlockRegistry } from "@/world/blocks/block-registry";
 import type { Chunk } from "@/world/chunk";
 
-const AO_BRIGHTNESS = [0.1, 0.5, 0.75, 1.0];
+const AO_BRIGHTNESS = [0.05, 0.25, 0.6, 0.8];
 
 export class ChunkMesher {
 	private chunk: Chunk;
