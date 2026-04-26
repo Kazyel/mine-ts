@@ -1,6 +1,11 @@
 import { type Material, Mesh, type Scene } from "three";
 import type { PlayerPosition } from "@/bridge/game-event-emitter";
-import { CHUNK_HEIGHT, CHUNK_SIZE, RENDER_DISTANCE } from "@/game/constants";
+import {
+	CHUNK_HEIGHT,
+	CHUNK_SIZE,
+	RENDER_DISTANCE,
+	SEA_LEVEL,
+} from "@/game/constants";
 import type { BlockId } from "@/world/blocks/block-type";
 import { Chunk } from "@/world/chunk";
 import {
@@ -63,12 +68,17 @@ export class World {
 		const newChunk = new Chunk(coord);
 
 		while (blockCount < CHUNK_SIZE * CHUNK_SIZE * CHUNK_HEIGHT) {
-			newChunk.setBlock(
-				blockCount % CHUNK_SIZE,
-				Math.floor(blockCount / (CHUNK_SIZE * CHUNK_SIZE)),
-				Math.floor(blockCount / CHUNK_SIZE) % CHUNK_SIZE,
-				1,
-			);
+			const blockY = Math.floor(blockCount / (CHUNK_SIZE * CHUNK_SIZE));
+
+			if (blockY <= SEA_LEVEL) {
+				newChunk.setBlock(
+					blockCount % CHUNK_SIZE,
+					blockY,
+					Math.floor(blockCount / CHUNK_SIZE) % CHUNK_SIZE,
+					1,
+				);
+			}
+
 			blockCount++;
 		}
 

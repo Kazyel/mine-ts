@@ -20,6 +20,10 @@ export class Player {
 		this.camera = camera;
 	}
 
+	public getPosition(): Vector3 {
+		return this.position;
+	}
+
 	public update(delta: number, input: InputState, world: World): void {
 		const lookDirection = this.camera.getWorldDirection(new Vector3());
 		lookDirection.y = 0;

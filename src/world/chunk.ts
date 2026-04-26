@@ -14,6 +14,16 @@ export class Chunk {
 	}
 
 	public getBlock(x: number, y: number, z: number): BlockId {
+		if (
+			x < 0 ||
+			x >= CHUNK_SIZE ||
+			z < 0 ||
+			z >= CHUNK_SIZE ||
+			y < 0 ||
+			y >= CHUNK_HEIGHT
+		)
+			return 0;
+
 		return this.blocks[x | (z << 4) | (y << 8)] as BlockId;
 	}
 
