@@ -4,7 +4,7 @@ import type { BlockId } from "@/world/blocks/block-type";
 import type { ChunkCoord } from "@/world/chunk-coord";
 
 export class Chunk {
-	private coord: ChunkCoord;
+	public coord: ChunkCoord;
 	private blocks: Uint8Array = new Uint8Array(
 		CHUNK_SIZE * CHUNK_SIZE * CHUNK_HEIGHT,
 	);

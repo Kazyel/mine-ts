@@ -10,7 +10,7 @@ export class ChunkMesher {
 		this.chunk = chunk;
 	}
 
-	public mesh(): BufferGeometry {
+	public generate(): BufferGeometry {
 		const blockPositions: number[] = [];
 		const blockUvs: number[] = [];
 

@@ -1,5 +1,7 @@
+export type PlayerPosition = { x: number; y: number; z: number };
+
 type GameStateSnapshot = {
-	playerPosition: { x: number; y: number; z: number };
+	playerPosition: PlayerPosition;
 	fps: number;
 	loadedChunks: number;
 };
