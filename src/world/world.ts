@@ -35,10 +35,10 @@ export class World {
 	}
 
 	public getBlock(worldX: number, worldY: number, worldZ: number): BlockId {
-		const chunk = this.getChunk(coordsfromWorldPosition(worldX, worldZ));
+		const chunkCoords = coordsfromWorldPosition(worldX, worldZ);
+		const chunk = this.getChunk(chunkCoords);
 		if (!chunk) return 0;
 
-		const chunkCoords = coordsfromWorldPosition(worldX, worldZ);
 		const localX = worldX - chunkCoords.cx * CHUNK_SIZE;
 		const localZ = worldZ - chunkCoords.cz * CHUNK_SIZE;
 
@@ -51,10 +51,10 @@ export class World {
 		worldZ: number,
 		blockId: BlockId,
 	): void {
-		const chunk = this.getChunk(coordsfromWorldPosition(worldX, worldZ));
+		const chunkCoords = coordsfromWorldPosition(worldX, worldZ);
+		const chunk = this.getChunk(chunkCoords);
 		if (!chunk) return;
 
-		const chunkCoords = coordsfromWorldPosition(worldX, worldZ);
 		const localX = worldX - chunkCoords.cx * CHUNK_SIZE;
 		const localZ = worldZ - chunkCoords.cz * CHUNK_SIZE;
 		chunk.setBlock(localX, worldY, localZ, blockId);
@@ -86,6 +86,7 @@ export class World {
 		const meshGeometry = chunkMesh.generate();
 		const objectMesh = new Mesh(meshGeometry, this.assetLoader.getMaterial());
 		objectMesh.position.set(coord.cx * CHUNK_SIZE, 0, coord.cz * CHUNK_SIZE);
+
 		this.scene.add(objectMesh);
 		this.loadedMeshes.set(coordsToChunkKey(coord), objectMesh);
 		this.loadedChunks.set(coordsToChunkKey(coord), newChunk);
@@ -99,7 +100,10 @@ export class World {
 		if (!chunk) return;
 
 		const mesh = this.loadedMeshes.get(key);
-		if (mesh) this.scene.remove(mesh);
+		if (mesh) {
+			mesh.geometry.dispose();
+			this.scene.remove(mesh);
+		}
 
 		this.loadedMeshes.delete(key);
 		this.loadedChunks.delete(key);

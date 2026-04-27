@@ -35,13 +35,11 @@ export class Game {
 			1000,
 		);
 
-		// Game Managers
 		this.loop = new GameLoop();
 		this.inputManager = new InputManager();
 		this.assetLoader = new AssetLoader();
 		this.events = events;
 
-		// World Entities
 		this.world = new World(this.scene, this.assetLoader);
 		this.player = new Player(this.camera);
 	}
