@@ -1,10 +1,10 @@
-import type { Vector3 } from "three";
+import { Vector3 } from "three";
 import { PLAYER_BOUNDING_BOX } from "@/entities/player";
 import { GRAVITY } from "@/game/constants";
 import { BlockRegistry } from "@/world/blocks/block-registry";
 import type { World } from "@/world/world";
 
-const EPS = 0.001;
+const EPSILON = 0.001;
 const MAX_STEP = 0.5;
 
 export function moveAndCollide(
@@ -13,93 +13,105 @@ export function moveAndCollide(
 	world: World,
 	delta: number,
 ): { position: Vector3; velocity: Vector3; onGround: boolean } {
-	const pos = position.clone();
-	const vel = velocity.clone();
+	let posX = position.x;
+	let posY = position.y;
+	let posZ = position.z;
+	let velX = velocity.x;
+	let velY = velocity.y;
+	let velZ = velocity.z;
 
 	let onGround = false;
 
-	vel.y -= GRAVITY * delta;
+	velY -= GRAVITY * delta;
 
 	const maxMove = Math.max(
-		Math.abs(vel.x * delta),
-		Math.abs(vel.y * delta),
-		Math.abs(vel.z * delta),
+		Math.abs(velX * delta),
+		Math.abs(velY * delta),
+		Math.abs(velZ * delta),
 	);
 
 	const steps = Math.max(1, Math.ceil(maxMove / MAX_STEP));
 	const stepDelta = delta / steps;
 
 	for (let i = 0; i < steps; i++) {
-		if (vel.x !== 0) {
-			const nextX = pos.x + vel.x * stepDelta;
-			const safeX = sweepAxis(pos, world, nextX, "x");
+		if (velX !== 0) {
+			const nextX = posX + velX * stepDelta;
+			const safeX = sweepAxis(posX, posY, posZ, world, nextX, "x");
 
-			if (safeX !== nextX) vel.x = 0;
-			pos.x = safeX;
+			if (safeX !== nextX) velX = 0;
+			posX = safeX;
 		}
 
-		if (vel.y !== 0) {
-			const nextY = pos.y + vel.y * stepDelta;
-			const result = sweepY(pos, world, nextY, vel.y);
+		if (velY !== 0) {
+			const nextY = posY + velY * stepDelta;
+			const result = sweepY(posX, posZ, world, nextY, velY);
 
 			if (result.collided) {
-				if (vel.y < 0) onGround = true;
-				vel.y = 0;
+				if (velY < 0) onGround = true;
+				velY = 0;
 			}
 
-			pos.y = result.y;
+			posY = result.y;
 		}
 
-		if (vel.z !== 0) {
-			const nextZ = pos.z + vel.z * stepDelta;
-			const safeZ = sweepAxis(pos, world, nextZ, "z");
+		if (velZ !== 0) {
+			const nextZ = posZ + velZ * stepDelta;
+			const safeZ = sweepAxis(posX, posY, posZ, world, nextZ, "z");
 
-			if (safeZ !== nextZ) vel.z = 0;
-			pos.z = safeZ;
+			if (safeZ !== nextZ) velZ = 0;
+			posZ = safeZ;
 		}
 	}
 
-	return { position: pos, velocity: vel, onGround };
+	return {
+		position: new Vector3(posX, posY, posZ),
+		velocity: new Vector3(velX, velY, velZ),
+		onGround,
+	};
 }
 
 function sweepAxis(
-	position: Vector3,
+	posX: number,
+	posY: number,
+	posZ: number,
 	world: World,
 	target: number,
 	axis: "x" | "z",
 ): number {
-	const dir = Math.sign(target - position[axis]);
-	if (dir === 0) return position[axis];
+	const currentPos = axis === "x" ? posX : posZ;
+	const direction = Math.sign(target - currentPos);
+	if (direction === 0) return currentPos;
 
-	const half = PLAYER_BOUNDING_BOX[axis];
-	const minY = Math.floor(position.y);
-	const maxY = Math.floor(position.y + PLAYER_BOUNDING_BOX.y);
+	const halfExtent = PLAYER_BOUNDING_BOX[axis];
+	const perpendicularAxis = axis === "x" ? "z" : "x";
+	const perpendicularHalfExtent = PLAYER_BOUNDING_BOX[perpendicularAxis];
+	const perpendicularPos = axis === "x" ? posZ : posX;
 
-	const crossMin = Math.floor(
-		position[axis === "x" ? "z" : "x"] -
-			PLAYER_BOUNDING_BOX[axis === "x" ? "z" : "x"],
-	);
-	const crossMax = Math.floor(
-		position[axis === "x" ? "z" : "x"] +
-			PLAYER_BOUNDING_BOX[axis === "x" ? "z" : "x"],
-	);
+	const blockMinY = Math.floor(posY);
+	const blockMaxY = Math.floor(posY + PLAYER_BOUNDING_BOX.y);
+	const crossBlockMin = Math.floor(perpendicularPos - perpendicularHalfExtent);
+	const crossBlockMax =
+		Math.ceil(perpendicularPos + perpendicularHalfExtent) - 1;
 
-	const edge = target + dir * half;
+	const leadingEdge = target + direction * halfExtent;
+	const leadingBlock = Math.floor(leadingEdge);
 
-	const blockCoord = dir > 0 ? Math.floor(edge) : Math.floor(edge);
+	for (let blockY = blockMinY; blockY <= blockMaxY; blockY++) {
+		for (
+			let crossBlock = crossBlockMin;
+			crossBlock <= crossBlockMax;
+			crossBlock++
+		) {
+			const blockX = axis === "x" ? leadingBlock : crossBlock;
+			const blockZ = axis === "z" ? leadingBlock : crossBlock;
 
-	for (let y = minY; y <= maxY; y++) {
-		for (let c = crossMin; c <= crossMax; c++) {
-			const x = axis === "x" ? blockCoord : c;
-			const z = axis === "z" ? blockCoord : c;
-
-			const block = world.getBlock(x, y, z);
+			const block = world.getBlock(blockX, blockY, blockZ);
 			if (!BlockRegistry[block].solid) continue;
 
-			if (dir > 0) {
-				return blockCoord - half - EPS;
+			if (direction > 0) {
+				return leadingBlock - halfExtent - EPSILON;
 			} else {
-				return blockCoord + 1 + half + EPS;
+				return leadingBlock + 1 + halfExtent + EPSILON;
 			}
 		}
 	}
@@ -108,40 +120,34 @@ function sweepAxis(
 }
 
 function sweepY(
-	position: Vector3,
+	posX: number,
+	posZ: number,
 	world: World,
 	targetY: number,
 	velocityY: number,
 ): { y: number; collided: boolean } {
-	const dir = Math.sign(velocityY);
-	if (dir === 0) return { y: targetY, collided: false };
+	const direction = Math.sign(velocityY);
+	if (direction === 0) return { y: targetY, collided: false };
 
-	const minX = Math.floor(position.x - PLAYER_BOUNDING_BOX.x);
-	const maxX = Math.floor(position.x + PLAYER_BOUNDING_BOX.x);
-	const minZ = Math.floor(position.z - PLAYER_BOUNDING_BOX.z);
-	const maxZ = Math.floor(position.z + PLAYER_BOUNDING_BOX.z);
+	const blockMinX = Math.floor(posX - PLAYER_BOUNDING_BOX.x);
+	const blockMaxX = Math.ceil(posX + PLAYER_BOUNDING_BOX.x) - 1;
+	const blockMinZ = Math.floor(posZ - PLAYER_BOUNDING_BOX.z);
+	const blockMaxZ = Math.ceil(posZ + PLAYER_BOUNDING_BOX.z) - 1;
 
-	const halfY = PLAYER_BOUNDING_BOX.y;
+	const height = PLAYER_BOUNDING_BOX.y;
 
-	const edge = dir > 0 ? targetY + halfY : targetY;
+	const leadingEdge = direction > 0 ? targetY + height : targetY;
+	const leadingBlock = Math.floor(leadingEdge);
 
-	const blockY = Math.floor(edge);
-
-	for (let x = minX; x <= maxX; x++) {
-		for (let z = minZ; z <= maxZ; z++) {
-			const block = world.getBlock(x, blockY, z);
+	for (let blockX = blockMinX; blockX <= blockMaxX; blockX++) {
+		for (let blockZ = blockMinZ; blockZ <= blockMaxZ; blockZ++) {
+			const block = world.getBlock(blockX, leadingBlock, blockZ);
 			if (!BlockRegistry[block].solid) continue;
 
-			if (dir > 0) {
-				return {
-					y: blockY - halfY - EPS,
-					collided: true,
-				};
+			if (direction > 0) {
+				return { y: leadingBlock - height - EPSILON, collided: true };
 			} else {
-				return {
-					y: blockY + 1 + EPS,
-					collided: true,
-				};
+				return { y: leadingBlock + 1 + EPSILON, collided: true };
 			}
 		}
 	}

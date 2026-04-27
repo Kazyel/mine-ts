@@ -9,30 +9,15 @@ export type InputState = {
 	isPointerLocked: boolean;
 };
 
+const EDGE_DAMPEN_THRESHOLD = 50;
+
 export class InputManager {
 	private state: InputState;
-	private heldKeys: Set<string>;
+	private heldKeys: Set<string> = new Set();
 	private document: Document | null = null;
 	private canvas: HTMLCanvasElement | null = null;
 
 	private onPointerLockChange: (() => void) | null = null;
-	private onRequestPointerLock: (() => void) | null = null;
-
-	private onKeyDown = (e: KeyboardEvent) => {
-		this.heldKeys.add(e.key);
-	};
-	private onKeyUp = (e: KeyboardEvent) => {
-		this.heldKeys.delete(e.key);
-	};
-	private onMouseMove = (e: MouseEvent) => {
-		if (!this.state.isPointerLocked) return;
-		this.state.mouseData.x = e.movementX;
-		this.state.mouseData.y = e.movementY;
-	};
-	private onAttack = () => {
-		if (!this.state.isPointerLocked) return;
-		this.state.attack = true;
-	};
 
 	constructor() {
 		this.state = {
@@ -45,45 +30,34 @@ export class InputManager {
 			mouseData: { x: 0, y: 0 },
 			isPointerLocked: false,
 		};
-
-		this.heldKeys = new Set();
 	}
 
-	public getState(): InputState {
-		this.state.forward = false;
-		this.state.backward = false;
-		this.state.left = false;
-		this.state.right = false;
-		this.state.jump = false;
+	private onKeyDown = (e: KeyboardEvent) => this.heldKeys.add(e.key);
+	private onKeyUp = (e: KeyboardEvent) => this.heldKeys.delete(e.key);
 
-		for (const key of this.heldKeys) {
-			switch (key) {
-				case "w":
-					this.state.forward = true;
-					break;
-				case "s":
-					this.state.backward = true;
-					break;
-				case "a":
-					this.state.left = true;
-					break;
-				case "d":
-					this.state.right = true;
-					break;
-				case " ":
-					this.state.jump = true;
-					break;
-				default:
-					break;
-			}
+	private onMouseMove = (e: MouseEvent) => {
+		if (!this.state.isPointerLocked) return;
+
+		this.state.mouseData.x =
+			Math.abs(e.movementX) > EDGE_DAMPEN_THRESHOLD
+				? e.movementX * 0.5
+				: e.movementX;
+		this.state.mouseData.y = e.movementY;
+	};
+
+	private onMouseDown = (e: MouseEvent) => {
+		e.stopPropagation();
+		if (!this.state.isPointerLocked) {
+			e.preventDefault();
+			this.canvas?.requestPointerLock();
+			return;
 		}
+		if (e.button === 0) this.state.attack = true;
+	};
 
-		const snapshot = { ...this.state };
-		this.state.mouseData = { x: 0, y: 0 };
-		this.state.attack = false;
-
-		return snapshot;
-	}
+	private onContextMenu = (e: Event) => {
+		if (this.state.isPointerLocked) e.preventDefault();
+	};
 
 	public start(canvas: HTMLCanvasElement, document: Document) {
 		this.document = document;
@@ -91,42 +65,53 @@ export class InputManager {
 
 		this.onPointerLockChange = () => {
 			this.state.isPointerLocked = document.pointerLockElement === canvas;
+			if (!this.state.isPointerLocked) this.heldKeys.clear();
 		};
 
-		this.onRequestPointerLock = () => {
-			if (!this.canvas) return;
-			if (this.state.isPointerLocked) return;
-			this.canvas.requestPointerLock();
-		};
-
-		this.canvas.addEventListener("click", this.onRequestPointerLock);
-		this.document.addEventListener("keydown", this.onKeyDown);
-		this.document.addEventListener("keyup", this.onKeyUp);
 		this.document.addEventListener(
 			"pointerlockchange",
 			this.onPointerLockChange,
 		);
+
+		this.document.addEventListener("keydown", this.onKeyDown);
+		this.document.addEventListener("keyup", this.onKeyUp);
+
+		this.canvas.addEventListener("contextmenu", this.onContextMenu);
 		this.document.addEventListener("mousemove", this.onMouseMove);
-		this.canvas.addEventListener("click", this.onAttack);
+		this.canvas.addEventListener("mousedown", this.onMouseDown, {
+			capture: true,
+		});
+	}
+
+	public getState(): InputState {
+		this.state.forward = this.heldKeys.has("w");
+		this.state.backward = this.heldKeys.has("s");
+		this.state.left = this.heldKeys.has("a");
+		this.state.right = this.heldKeys.has("d");
+		this.state.jump = this.heldKeys.has(" ");
+
+		const snapshot = { ...this.state };
+		this.state.mouseData = { x: 0, y: 0 };
+		this.state.attack = false;
+		return snapshot;
 	}
 
 	public destroy() {
 		if (!this.document || !this.canvas) return;
 
-		if (this.onPointerLockChange) {
+		this.document.removeEventListener("keydown", this.onKeyDown);
+		this.document.removeEventListener("keyup", this.onKeyUp);
+
+		if (this.onPointerLockChange)
 			this.document.removeEventListener(
 				"pointerlockchange",
 				this.onPointerLockChange,
 			);
-		}
 
-		if (this.onRequestPointerLock) {
-			this.canvas.removeEventListener("click", this.onRequestPointerLock);
-		}
-
-		this.document.removeEventListener("keydown", this.onKeyDown);
-		this.document.removeEventListener("keyup", this.onKeyUp);
+		this.canvas.removeEventListener("contextmenu", this.onContextMenu);
 		this.document.removeEventListener("mousemove", this.onMouseMove);
-		this.canvas.removeEventListener("click", this.onAttack);
+		this.canvas.removeEventListener("mousedown", this.onMouseDown, {
+			capture: true,
+		});
 	}
 }

@@ -35,19 +35,17 @@ export class Game {
 			1000,
 		);
 
-		// Game Managers
 		this.loop = new GameLoop();
 		this.inputManager = new InputManager();
 		this.assetLoader = new AssetLoader();
 		this.events = events;
 
-		// World Entities
 		this.world = new World(this.scene, this.assetLoader);
 		this.player = new Player(this.camera);
 	}
 
 	private tick = (delta: number): void => {
-		this.world.renderDistance(this.player.getPosition());
+		this.world.update(this.player.getPosition());
 		this.player.update(delta, this.inputManager.getState(), this.world);
 		this.renderer.render(this.scene, this.camera);
 	};

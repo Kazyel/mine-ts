@@ -3,22 +3,9 @@ import type { World } from "@/world/world";
 
 type RaycastResult = {
 	blockId: number;
-	blockPosition: {
-		x: number;
-		y: number;
-		z: number;
-	};
-	faceHit: {
-		x: number;
-		y: number;
-		z: number;
-	};
-	adjacentBlock: {
-		x: number;
-		y: number;
-		z: number;
-		blockId: number;
-	};
+	blockPosition: { x: number; y: number; z: number };
+	faceHit: { x: number; y: number; z: number };
+	adjacentBlock: { x: number; y: number; z: number; blockId: number };
 };
 
 export function raycastDDA(
@@ -31,67 +18,61 @@ export function raycastDDA(
 	let by = Math.floor(origin.y);
 	let bz = Math.floor(origin.z);
 
-	const stepX = Math.sign(direction.x);
-	const stepY = Math.sign(direction.y);
-	const stepZ = Math.sign(direction.z);
+	const stepX = direction.x > 0 ? 1 : -1;
+	const stepY = direction.y > 0 ? 1 : -1;
+	const stepZ = direction.z > 0 ? 1 : -1;
 
-	const tDeltaX = Math.abs(1 / direction.x);
-	const tDeltaY = Math.abs(1 / direction.y);
-	const tDeltaZ = Math.abs(1 / direction.z);
+	const tDeltaX = Math.abs(1 / (direction.x || 1e-9));
+	const tDeltaY = Math.abs(1 / (direction.y || 1e-9));
+	const tDeltaZ = Math.abs(1 / (direction.z || 1e-9));
 
-	let tMaxX = 0;
-	if (stepX === 0) tMaxX = Infinity;
-	if (stepX > 0) tMaxX = (1 - (origin.x - bx)) * tDeltaX;
-	if (stepX < 0) tMaxX = (origin.x - bx) * tDeltaX;
+	let tMaxX =
+		stepX > 0 ? (bx + 1 - origin.x) * tDeltaX : (origin.x - bx) * tDeltaX;
+	let tMaxY =
+		stepY > 0 ? (by + 1 - origin.y) * tDeltaY : (origin.y - by) * tDeltaY;
+	let tMaxZ =
+		stepZ > 0 ? (bz + 1 - origin.z) * tDeltaZ : (origin.z - bz) * tDeltaZ;
 
-	let tMaxY = 0;
-	if (stepY === 0) tMaxY = Infinity;
-	if (stepY > 0) tMaxY = (1 - (origin.y - by)) * tDeltaY;
-	if (stepY < 0) tMaxY = (origin.y - by) * tDeltaY;
+	const initialId = world.getBlock(bx, by, bz);
+	if (initialId !== 0) {
+		return null;
+	}
 
-	let tMaxZ = 0;
-	if (stepZ === 0) tMaxZ = Infinity;
-	if (stepZ > 0) tMaxZ = (1 - (origin.z - bz)) * tDeltaZ;
-	if (stepZ < 0) tMaxZ = (origin.z - bz) * tDeltaZ;
+	let lastHitAxis: number;
 
-	while (Math.min(tMaxX, tMaxY, tMaxZ) < maxDistance) {
+	while (true) {
 		const tMin = Math.min(tMaxX, tMaxY, tMaxZ);
+		if (tMin > maxDistance) break;
 
-		const faceHit: { x: number; y: number; z: number } = {
-			x: 0,
-			y: 0,
-			z: 0,
-		};
-
-		if (tMin === tMaxX) {
+		if (tMaxX < tMaxY && tMaxX < tMaxZ) {
 			bx += stepX;
 			tMaxX += tDeltaX;
-			faceHit.x = -stepX;
-		} else if (tMin === tMaxY) {
+			lastHitAxis = 0;
+		} else if (tMaxY < tMaxZ) {
 			by += stepY;
 			tMaxY += tDeltaY;
-			faceHit.y = -stepY;
-		} else if (tMin === tMaxZ) {
+			lastHitAxis = 1;
+		} else {
 			bz += stepZ;
 			tMaxZ += tDeltaZ;
-			faceHit.z = -stepZ;
+			lastHitAxis = 2;
 		}
 
 		const blockId = world.getBlock(bx, by, bz);
 		if (blockId !== 0) {
+			const fx = lastHitAxis === 0 ? -stepX : 0;
+			const fy = lastHitAxis === 1 ? -stepY : 0;
+			const fz = lastHitAxis === 2 ? -stepZ : 0;
+
 			return {
 				blockId,
 				blockPosition: { x: bx, y: by, z: bz },
-				faceHit,
+				faceHit: { x: fx, y: fy, z: fz },
 				adjacentBlock: {
-					x: bx + faceHit.x,
-					y: by + faceHit.y,
-					z: bz + faceHit.z,
-					blockId: world.getBlock(
-						bx + faceHit.x,
-						by + faceHit.y,
-						bz + faceHit.z,
-					),
+					x: bx + fx,
+					y: by + fy,
+					z: bz + fz,
+					blockId: world.getBlock(bx + fx, by + fy, bz + fz),
 				},
 			};
 		}

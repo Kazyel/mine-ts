@@ -1,5 +1,4 @@
 import { CHUNK_HEIGHT, CHUNK_SIZE } from "@/game/constants";
-
 import type { BlockId } from "@/world/blocks/block-type";
 import type { ChunkCoord } from "@/world/chunk-coord";
 
@@ -13,6 +12,11 @@ export class Chunk {
 		this.coord = coord;
 	}
 
+	public fillToHeight(targetY: number, blockId: BlockId): void {
+		const endIndex = (targetY + 1) << 8;
+		this.blocks.fill(blockId, 0, Math.min(endIndex, this.blocks.length));
+	}
+
 	public getBlock(x: number, y: number, z: number): BlockId {
 		if (
 			x < 0 ||
@@ -24,11 +28,11 @@ export class Chunk {
 		) {
 			return 0;
 		}
-
 		return this.blocks[x | (z << 4) | (y << 8)] as BlockId;
 	}
 
 	public setBlock(x: number, y: number, z: number, blockId: BlockId): void {
+		if (y < 0 || y >= CHUNK_HEIGHT) return;
 		this.blocks[x | (z << 4) | (y << 8)] = blockId;
 	}
 }
