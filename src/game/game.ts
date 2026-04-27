@@ -45,7 +45,7 @@ export class Game {
 	}
 
 	private tick = (delta: number): void => {
-		this.world.renderDistance(this.player.getPosition());
+		this.world.update(this.player.getPosition());
 		this.player.update(delta, this.inputManager.getState(), this.world);
 		this.renderer.render(this.scene, this.camera);
 	};
